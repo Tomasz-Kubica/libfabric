@@ -93,6 +93,31 @@ void ft_benchmark_usage(void)
 	FT_PRINT_OPTS_USAGE("", "\tfi_rdm_pingpong");
 }
 
+void print_benchmark_performance_as_json(
+	struct timespec *iterations_timestamps,
+	size_t iterations_no,
+	size_t msg_size) {
+		// TODO: Change from JSON to CSV
+
+		printf("{\n");
+		printf("\t\"msg_size\": %lu,\n", msg_size);
+		printf("\t\"iterations_no\": %lu,\n", iterations_no);
+		printf("\t\"latency_ns\": [");
+		for (size_t i = 0; i < iterations_no; i++) {
+			struct timespec start = iterations_timestamps[i * 2];
+			struct timespec end = iterations_timestamps[i * 2 + 1];
+			int64_t start_ns = start.tv_sec * 1000000000 + start.tv_nsec;
+			int64_t end_ns = end.tv_sec * 1000000000 + end.tv_nsec;
+			int64_t duration_ns = end_ns - start_ns;
+			printf("%lu", duration_ns);
+			if (i < iterations_no - 1) {
+				printf(", ");
+			}
+		}
+		printf("]\n");
+		printf("}\n");
+}
+
 /* Pingpong latency test with pre-posted receive buffers. */
 static int pingpong_pre_posted_rx(size_t inject_size)
 {
@@ -288,6 +313,12 @@ int run_pingpong(void)
 
 int pingpong_rma(enum ft_rma_opcodes rma_op, struct fi_rma_iov *remote)
 {
+  // Alloc memory for roundtrip latency for every iteration (not including warmup interation)
+	// Two timestamps per iteration - start and end
+	struct timespec *iterations_timestamps = malloc(sizeof(struct timespec) * opts.iterations * 2);
+	struct timespec iteration_start;
+	struct timespec iteration_end;
+
 	int ret, i;
 	size_t inject_size = fi->tx_attr->inject_size;
 
@@ -330,6 +361,9 @@ int pingpong_rma(enum ft_rma_opcodes rma_op, struct fi_rma_iov *remote)
 			if (i == opts.warmup_iterations)
 				ft_start();
 
+			if (i >= opts.warmup_iterations)
+				clock_gettime(CLOCK_MONOTONIC, &iteration_start);
+
 			if (rma_op == FT_RMA_WRITE)
 				*(tx_buf + opts.transfer_size - 1) = (char)i;
 
@@ -346,11 +380,22 @@ int pingpong_rma(enum ft_rma_opcodes rma_op, struct fi_rma_iov *remote)
 			ret = ft_rx_rma(i, rma_op, ep, opts.transfer_size);
 			if (ret)
 				return ret;
+
+			if (i >= opts.warmup_iterations) {
+				clock_gettime(CLOCK_MONOTONIC, &iteration_end);
+
+				iterations_timestamps[(i - opts.warmup_iterations) * 2] = iteration_start;
+				iterations_timestamps[(i - opts.warmup_iterations) * 2 + 1] = iteration_end;
+			}
+
 		}
 	} else {
 		for (i = 0; i < opts.iterations + opts.warmup_iterations; i++) {
 			if (i == opts.warmup_iterations)
 				ft_start();
+
+			if (i >= opts.warmup_iterations)
+				clock_gettime(CLOCK_MONOTONIC, &iteration_start);
 
 			ret = ft_rx_rma(i, rma_op, ep, opts.transfer_size);
 			if (ret)
@@ -368,15 +413,30 @@ int pingpong_rma(enum ft_rma_opcodes rma_op, struct fi_rma_iov *remote)
 						opts.transfer_size, &tx_ctx);
 			if (ret)
 				return ret;
+
+			if (i >= opts.warmup_iterations) {
+				clock_gettime(CLOCK_MONOTONIC, &iteration_end);
+
+				iterations_timestamps[(i - opts.warmup_iterations) * 2] = iteration_start;
+				iterations_timestamps[(i - opts.warmup_iterations) * 2 + 1] = iteration_end;
+			}
 		}
 	}
 	ft_stop();
 
-	if (opts.machr)
-		show_perf_mr(opts.transfer_size, opts.iterations, &start, &end, 2,
-				opts.argc, opts.argv);
+	if (opts.machr) {
+		// show_perf_mr(opts.transfer_size, opts.iterations, &start, &end, 2,
+		// 		opts.argc, opts.argv);
+		print_benchmark_performance_as_json(
+			iterations_timestamps,
+			opts.iterations,
+			opts.transfer_size);
+	}
 	else
 		show_perf(NULL, opts.transfer_size, opts.iterations, &start, &end, 2);
+
+	// Free memory containing timestamp data, it was already returned to the user
+	free(iterations_timestamps);
 
 	return 0;
 }
