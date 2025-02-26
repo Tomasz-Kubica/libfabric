@@ -97,8 +97,6 @@ void print_benchmark_performance_as_json(
 	struct timespec *iterations_timestamps,
 	size_t iterations_no,
 	size_t msg_size) {
-		// TODO: Change from JSON to CSV
-
 		printf("{\n");
 		printf("\t\"msg_size\": %lu,\n", msg_size);
 		printf("\t\"iterations_no\": %lu,\n", iterations_no);
@@ -116,6 +114,21 @@ void print_benchmark_performance_as_json(
 		}
 		printf("]\n");
 		printf("}\n");
+}
+
+void print_benchmark_performance_as_csv(
+	struct timespec *iterations_timestamps,
+	size_t iterations_no,
+	size_t msg_size) {
+		printf("interation_no, latency_ns\n");
+		for (size_t i = 0; i < iterations_no; i++) {
+			struct timespec start = iterations_timestamps[i * 2];
+			struct timespec end = iterations_timestamps[i * 2 + 1];
+			uint64_t start_ns = start.tv_sec * 1000000000 + start.tv_nsec;
+			uint64_t end_ns = end.tv_sec * 1000000000 + end.tv_nsec;
+			uint64_t duration_ns = end_ns - start_ns;
+			printf("%lu, %lu\n", i, duration_ns);
+		}
 }
 
 /* Pingpong latency test with pre-posted receive buffers. */
@@ -427,7 +440,7 @@ int pingpong_rma(enum ft_rma_opcodes rma_op, struct fi_rma_iov *remote)
 	if (opts.machr) {
 		// show_perf_mr(opts.transfer_size, opts.iterations, &start, &end, 2,
 		// 		opts.argc, opts.argv);
-		print_benchmark_performance_as_json(
+		print_benchmark_performance_as_csv(
 			iterations_timestamps,
 			opts.iterations,
 			opts.transfer_size);
