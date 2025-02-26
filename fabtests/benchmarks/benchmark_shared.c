@@ -136,10 +136,16 @@ static int pingpong_pre_posted_rx(size_t inject_size)
 {
 	int ret, i;
 
+	struct timespec iteration_start;
+	struct timespec iteration_end;
+
 	if (opts.dst_addr) {
 		for (i = 0; i < opts.iterations + opts.warmup_iterations; i++) {
 			if (i == opts.warmup_iterations)
 				ft_start();
+
+			if (i >= opts.warmup_iterations)
+				clock_gettime(CLOCK_MONOTONIC, &iteration_end);
 
 			if (opts.transfer_size <= inject_size)
 				ret = ft_inject(ep, remote_fi_addr,
@@ -153,6 +159,13 @@ static int pingpong_pre_posted_rx(size_t inject_size)
 			ret = ft_rx(ep, opts.transfer_size);
 			if (ret)
 				return ret;
+
+			if (i >= opts.warmup_iterations) {
+				clock_gettime(CLOCK_MONOTONIC, &iteration_end);
+
+				iterations_timestamps[(i - opts.warmup_iterations) * 2] = iteration_start;
+				iterations_timestamps[(i - opts.warmup_iterations) * 2 + 1] = iteration_end;
+			}
 		}
 	} else {
 		for (i = 0; i < opts.iterations + opts.warmup_iterations; i++) {
@@ -181,12 +194,18 @@ static int pingpong_pre_posted_rx(size_t inject_size)
 /* Pingpong latency test without pre-posted receive buffers. */
 static int pingpong_no_pre_posted_rx(size_t inject_size)
 {
+  struct timespec iteration_start;
+	struct timespec iteration_end;
+
 	int ret, i;
 
 	if (opts.dst_addr) {
 		for (i = 0; i < opts.iterations + opts.warmup_iterations; i++) {
 			if (i == opts.warmup_iterations)
 				ft_start();
+
+			if (i >= opts.warmup_iterations)
+				clock_gettime(CLOCK_MONOTONIC, &iteration_end);
 
 			if (opts.transfer_size <= inject_size)
 				ret = ft_inject(ep, remote_fi_addr,
@@ -204,7 +223,13 @@ static int pingpong_no_pre_posted_rx(size_t inject_size)
 			ret = ft_get_rx_comp(rx_seq);
 			if (ret)
 				return ret;
-		}
+
+			if (i >= opts.warmup_iterations) {
+				clock_gettime(CLOCK_MONOTONIC, &iteration_end);
+
+			  iterations_timestamps[(i - opts.warmup_iterations) * 2] = iteration_start;
+			  iterations_timestamps[(i - opts.warmup_iterations) * 2 + 1] = iteration_end;
+		  }
 	} else {
 		for (i = 0; i < opts.iterations + opts.warmup_iterations; i++) {
 			if (i == opts.warmup_iterations)
@@ -242,6 +267,10 @@ static int pingpong_no_pre_posted_rx(size_t inject_size)
 
 int pingpong(void)
 {
+  // Alloc memory for roundtrip latency for every iteration (not including warmup interation)
+	// Two timestamps per iteration - start and end
+	iterations_timestamps = malloc(sizeof(struct timespec) * opts.iterations * 2);
+
 	int ret;
 	size_t inject_size = fi->tx_attr->inject_size;
 
@@ -287,11 +316,22 @@ int pingpong(void)
 			return ret;
 	}
 
-	if (opts.machr)
-		show_perf_mr(opts.transfer_size, opts.iterations, &start, &end, 2,
+	if (opts.machr) {
+		if (opts.dst_addr) {
+		  print_benchmark_performance_as_csv(
+		  	iterations_timestamps,
+		  	opts.iterations,
+		  	opts.transfer_size);
+		} else {
+			show_perf_mr(opts.transfer_size, opts.iterations, &start, &end, 2,
 				opts.argc, opts.argv);
+		}
+	}
 	else
 		show_perf(NULL, opts.transfer_size, opts.iterations, &start, &end, 2);
+
+	// Free memory containing timestamp data, it was already returned to the user
+	free(iterations_timestamps);
 
 	return 0;
 }
@@ -328,7 +368,7 @@ int pingpong_rma(enum ft_rma_opcodes rma_op, struct fi_rma_iov *remote)
 {
   // Alloc memory for roundtrip latency for every iteration (not including warmup interation)
 	// Two timestamps per iteration - start and end
-	struct timespec *iterations_timestamps = malloc(sizeof(struct timespec) * opts.iterations * 2);
+	iterations_timestamps = malloc(sizeof(struct timespec) * opts.iterations * 2);
 	struct timespec iteration_start;
 	struct timespec iteration_end;
 
@@ -438,12 +478,15 @@ int pingpong_rma(enum ft_rma_opcodes rma_op, struct fi_rma_iov *remote)
 	ft_stop();
 
 	if (opts.machr) {
-		// show_perf_mr(opts.transfer_size, opts.iterations, &start, &end, 2,
-		// 		opts.argc, opts.argv);
-		print_benchmark_performance_as_csv(
-			iterations_timestamps,
-			opts.iterations,
-			opts.transfer_size);
+		if (opts.dst_addr) {
+		  print_benchmark_performance_as_csv(
+		  	iterations_timestamps,
+		  	opts.iterations,
+		  	opts.transfer_size);
+		} else {
+			show_perf_mr(opts.transfer_size, opts.iterations, &start, &end, 2,
+				opts.argc, opts.argv);
+		}
 	}
 	else
 		show_perf(NULL, opts.transfer_size, opts.iterations, &start, &end, 2);

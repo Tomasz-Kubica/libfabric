@@ -104,6 +104,7 @@ const char *greeting = "Hello from Client!";
 char test_name[50] = "custom";
 int timeout = -1;
 struct timespec start, end;
+struct timespec *iterations_timestamps;
 
 int listen_sock = -1;
 int sock = -1;

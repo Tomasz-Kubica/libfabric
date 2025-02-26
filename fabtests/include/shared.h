@@ -264,6 +264,7 @@ extern struct fi_rma_iov remote;
 
 extern char test_name[50];
 extern struct timespec start, end;
+extern struct timespec *iterations_timestamps;
 extern struct ft_opts opts;
 
 void ft_parseinfo(int op, char *optarg, struct fi_info *hints,
