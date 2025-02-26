@@ -230,6 +230,7 @@ static int pingpong_no_pre_posted_rx(size_t inject_size)
 			  iterations_timestamps[(i - opts.warmup_iterations) * 2] = iteration_start;
 			  iterations_timestamps[(i - opts.warmup_iterations) * 2 + 1] = iteration_end;
 		  }
+		}
 	} else {
 		for (i = 0; i < opts.iterations + opts.warmup_iterations; i++) {
 			if (i == opts.warmup_iterations)
