@@ -120,14 +120,17 @@ void print_benchmark_performance_as_csv(
 	struct timespec *iterations_timestamps,
 	size_t iterations_no,
 	size_t msg_size) {
-		printf("interation_no, latency_ns\n");
+		printf("#, usec\n");
 		for (size_t i = 0; i < iterations_no; i++) {
 			struct timespec start = iterations_timestamps[i * 2];
 			struct timespec end = iterations_timestamps[i * 2 + 1];
 			uint64_t start_ns = start.tv_sec * 1000000000 + start.tv_nsec;
 			uint64_t end_ns = end.tv_sec * 1000000000 + end.tv_nsec;
 			uint64_t duration_ns = end_ns - start_ns;
-			printf("%lu, %lu\n", i, duration_ns);
+			// Duration is roundtrip latency, so we need to divide it by 2
+			// to get one-way latency
+			double half_duration_us = (duration_ns / 1000.0) / 2.0;
+			printf("%lu, %lf\n", i, half_duration_us);
 		}
 }
 
