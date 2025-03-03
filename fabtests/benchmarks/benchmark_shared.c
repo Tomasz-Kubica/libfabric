@@ -145,7 +145,7 @@ static int pingpong_pre_posted_rx(size_t inject_size)
 				ft_start();
 
 			if (i >= opts.warmup_iterations)
-				clock_gettime(CLOCK_MONOTONIC, &iteration_end);
+				clock_gettime(CLOCK_MONOTONIC, &iteration_start);
 
 			if (opts.transfer_size <= inject_size)
 				ret = ft_inject(ep, remote_fi_addr,
@@ -205,7 +205,7 @@ static int pingpong_no_pre_posted_rx(size_t inject_size)
 				ft_start();
 
 			if (i >= opts.warmup_iterations)
-				clock_gettime(CLOCK_MONOTONIC, &iteration_end);
+				clock_gettime(CLOCK_MONOTONIC, &iteration_start);
 
 			if (opts.transfer_size <= inject_size)
 				ret = ft_inject(ep, remote_fi_addr,
