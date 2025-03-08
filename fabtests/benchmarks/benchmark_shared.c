@@ -74,6 +74,9 @@ void ft_parse_benchmark_opts(int op, char *optarg)
 	case 'r':
 		opts.options |= FT_OPT_NO_PRE_POSTED_RX;
 		break;
+	case 'g':
+		opts.measure_cycles = true;
+		break;
 	default:
 		break;
 	}
@@ -122,7 +125,11 @@ void print_benchmark_performance_as_csv(
 	long long *iterations_cycles,
 	size_t iterations_no,
 	size_t msg_size) {
-		printf("#,usec,cycles\n");
+		if (opts.measure_cycles)
+			printf("#,usec,cycles\n");
+		else
+			printf("#,usec\n");
+		
 		for (size_t i = 0; i < iterations_no; i++) {
 			struct timespec start = iterations_timestamps[i * 2];
 			struct timespec end = iterations_timestamps[i * 2 + 1];
@@ -133,7 +140,10 @@ void print_benchmark_performance_as_csv(
 			// to get one-way latency
 			double half_duration_us = (duration_ns / 1000.0) / 2.0;
 
-			printf("%lu, %lf, %lld\n", i, half_duration_us, iterations_cycles[i]);
+			if (opts.measure_cycles)
+				printf("%lu, %lf, %lld\n", i, half_duration_us, iterations_cycles[i]);
+			else
+				printf("%lu, %lf\n", i, half_duration_us);
 		}
 }
 
@@ -142,17 +152,19 @@ static int pingpong_pre_posted_rx(size_t inject_size)
 {
 	int EventSet = PAPI_NULL;
 
-  // Initialize the PAPI library
-  if (PAPI_library_init(PAPI_VER_CURRENT) != PAPI_VER_CURRENT)
-    exit(1);
+	if (opts.measure_cycles) {
+  	// Initialize the PAPI library
+  	if (PAPI_library_init(PAPI_VER_CURRENT) != PAPI_VER_CURRENT)
+  	  exit(1);
 
-	// Create the event set
-  if (PAPI_create_eventset(&EventSet) != PAPI_OK)
-    exit(1);
+		// Create the event set
+  	if (PAPI_create_eventset(&EventSet) != PAPI_OK)
+  	  exit(1);
 
-	// Add total CPU cycles to the event set
-  if (PAPI_add_event(EventSet, PAPI_TOT_CYC) != PAPI_OK)
-    exit(1);
+		// Add total CPU cycles to the event set
+  	if (PAPI_add_event(EventSet, PAPI_TOT_CYC) != PAPI_OK)
+  	  exit(1);
+	}
 
 	int ret, i;
 
@@ -170,7 +182,8 @@ static int pingpong_pre_posted_rx(size_t inject_size)
 					clock_gettime(CLOCK_MONOTONIC, &iteration_start);
 	
 					// Start counting cycles
-					PAPI_start(EventSet);
+					if (opts.measure_cycles)
+						PAPI_start(EventSet);
 				}
 
 			if (opts.transfer_size <= inject_size)
@@ -188,14 +201,16 @@ static int pingpong_pre_posted_rx(size_t inject_size)
 
 			if (i >= opts.warmup_iterations) {
         // Stop counting cycles
-  			PAPI_stop(EventSet, &cycles_no);
+				if (opts.measure_cycles)
+  				PAPI_stop(EventSet, &cycles_no);
 
 				clock_gettime(CLOCK_MONOTONIC, &iteration_end);
 
 				iterations_timestamps[(i - opts.warmup_iterations) * 2] = iteration_start;
 				iterations_timestamps[(i - opts.warmup_iterations) * 2 + 1] = iteration_end;
 
-				iterations_cycles[i - opts.warmup_iterations] = cycles_no;
+				if (opts.measure_cycles)
+					iterations_cycles[i - opts.warmup_iterations] = cycles_no;
 			}
 		}
 	} else {
@@ -227,17 +242,19 @@ static int pingpong_no_pre_posted_rx(size_t inject_size)
 {
   int EventSet = PAPI_NULL;
 
-	// Initialize the PAPI library
-  if (PAPI_library_init(PAPI_VER_CURRENT) != PAPI_VER_CURRENT)
-    exit(1);
+	if (opts.measure_cycles) {
+		// Initialize the PAPI library
+  	if (PAPI_library_init(PAPI_VER_CURRENT) != PAPI_VER_CURRENT)
+  	  exit(1);
 
-	// Create the event set
-  if (PAPI_create_eventset(&EventSet) != PAPI_OK)
-    exit(1);
+		// Create the event set
+  	if (PAPI_create_eventset(&EventSet) != PAPI_OK)
+  	  exit(1);
 
-	// Add total CPU cycles to the event set
-  if (PAPI_add_event(EventSet, PAPI_TOT_CYC) != PAPI_OK)
-    exit(1);
+		// Add total CPU cycles to the event set
+  	if (PAPI_add_event(EventSet, PAPI_TOT_CYC) != PAPI_OK)
+  	  exit(1);
+	}
 
   struct timespec iteration_start;
 	struct timespec iteration_end;
@@ -255,7 +272,8 @@ static int pingpong_no_pre_posted_rx(size_t inject_size)
 					clock_gettime(CLOCK_MONOTONIC, &iteration_start);
 	
 					// Start counting cycles
-					PAPI_start(EventSet);
+					if (opts.measure_cycles)
+						PAPI_start(EventSet);
 				}
 
 			if (opts.transfer_size <= inject_size)
@@ -277,14 +295,16 @@ static int pingpong_no_pre_posted_rx(size_t inject_size)
 
 			if (i >= opts.warmup_iterations) {
         // Stop counting cycles
-  			PAPI_stop(EventSet, &cycles_no);
+				if (opts.measure_cycles)
+  				PAPI_stop(EventSet, &cycles_no);
 
 				clock_gettime(CLOCK_MONOTONIC, &iteration_end);
 
 				iterations_timestamps[(i - opts.warmup_iterations) * 2] = iteration_start;
 				iterations_timestamps[(i - opts.warmup_iterations) * 2 + 1] = iteration_end;
 
-				iterations_cycles[i - opts.warmup_iterations] = cycles_no;
+				if (opts.measure_cycles)
+					iterations_cycles[i - opts.warmup_iterations] = cycles_no;
 			}
 		}
 	} else {
@@ -433,17 +453,25 @@ int pingpong_rma(enum ft_rma_opcodes rma_op, struct fi_rma_iov *remote)
 
 	int EventSet = PAPI_NULL;
 
-	// Initialize the PAPI library
-  if (PAPI_library_init(PAPI_VER_CURRENT) != PAPI_VER_CURRENT)
-    exit(1);
+	if (opts.measure_cycles) {
+		// Initialize the PAPI library
+  	if (PAPI_library_init(PAPI_VER_CURRENT) != PAPI_VER_CURRENT) {
+			printf("PAPI_library_init failed\n");
+  	  exit(1);
+		}
 
-	// Create the event set
-  if (PAPI_create_eventset(&EventSet) != PAPI_OK)
-    exit(1);
+		// Create the event set
+  	if (PAPI_create_eventset(&EventSet) != PAPI_OK) {
+			printf("PAPI_create_eventset failed\n");
+  	  exit(1);
+		}
 
-	// Add total CPU cycles to the event set
-  if (PAPI_add_event(EventSet, PAPI_TOT_CYC) != PAPI_OK)
-    exit(1);
+		// Add total CPU cycles to the event set
+  	if (PAPI_add_event(EventSet, PAPI_TOT_CYC) != PAPI_OK) {
+			printf("PAPI_add_event failed\n");
+  	  exit(1);
+		}
+	}
 
 	struct timespec iteration_start;
 	struct timespec iteration_end;
@@ -495,7 +523,8 @@ int pingpong_rma(enum ft_rma_opcodes rma_op, struct fi_rma_iov *remote)
 				clock_gettime(CLOCK_MONOTONIC, &iteration_start);
 
 				// Start counting cycles
-  			PAPI_start(EventSet);
+				if (opts.measure_cycles)
+  				PAPI_start(EventSet);
 			}
 
 			if (rma_op == FT_RMA_WRITE)
@@ -517,14 +546,16 @@ int pingpong_rma(enum ft_rma_opcodes rma_op, struct fi_rma_iov *remote)
 
 			if (i >= opts.warmup_iterations) {
         // Stop counting cycles
-  			PAPI_stop(EventSet, &cycles_no);
+				if (opts.measure_cycles)
+  				PAPI_stop(EventSet, &cycles_no);
 
 				clock_gettime(CLOCK_MONOTONIC, &iteration_end);
 
 				iterations_timestamps[(i - opts.warmup_iterations) * 2] = iteration_start;
 				iterations_timestamps[(i - opts.warmup_iterations) * 2 + 1] = iteration_end;
 
-				iterations_cycles[i - opts.warmup_iterations] = cycles_no;
+				if (opts.measure_cycles)
+					iterations_cycles[i - opts.warmup_iterations] = cycles_no;
 			}
 		}
 	} else {
@@ -536,7 +567,8 @@ int pingpong_rma(enum ft_rma_opcodes rma_op, struct fi_rma_iov *remote)
 				clock_gettime(CLOCK_MONOTONIC, &iteration_start);
 
 				// Start counting cycles
-  			PAPI_start(EventSet);
+				if (opts.measure_cycles)
+  				PAPI_start(EventSet);
 			}
 
 			ret = ft_rx_rma(i, rma_op, ep, opts.transfer_size);
@@ -558,14 +590,16 @@ int pingpong_rma(enum ft_rma_opcodes rma_op, struct fi_rma_iov *remote)
 
 			if (i >= opts.warmup_iterations) {
         // Stop counting cycles
-  			PAPI_stop(EventSet, &cycles_no);
+				if (opts.measure_cycles)
+  				PAPI_stop(EventSet, &cycles_no);
 
 				clock_gettime(CLOCK_MONOTONIC, &iteration_end);
 
 				iterations_timestamps[(i - opts.warmup_iterations) * 2] = iteration_start;
 				iterations_timestamps[(i - opts.warmup_iterations) * 2 + 1] = iteration_end;
 
-				iterations_cycles[i - opts.warmup_iterations] = cycles_no;
+				if (opts.measure_cycles)
+					iterations_cycles[i - opts.warmup_iterations] = cycles_no;
 			}
 		}
 	}
