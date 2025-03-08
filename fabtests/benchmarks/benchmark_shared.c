@@ -133,7 +133,7 @@ void print_benchmark_performance_as_csv(
 			// to get one-way latency
 			double half_duration_us = (duration_ns / 1000.0) / 2.0;
 
-			printf("%lu, %lf\n, %lld", i, half_duration_us, iterations_cycles[i]);
+			printf("%lu, %lf, %lld\n", i, half_duration_us, iterations_cycles[i]);
 		}
 }
 
