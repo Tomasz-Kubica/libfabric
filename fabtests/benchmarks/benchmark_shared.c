@@ -121,7 +121,6 @@ void print_benchmark_performance_as_json(
 }
 
 void print_benchmark_performance_as_csv(struct timespec *iterations_timestamps,
-					long long *iterations_cycles,
 					size_t iterations_no, size_t msg_size)
 {
 	if (opts.measure_cycles) {
@@ -173,9 +172,9 @@ static int pingpong_pre_posted_rx(size_t inject_size)
 			if (i == opts.warmup_iterations)
 				ft_start();
 
-				if (i >= opts.warmup_iterations) {
-					clock_gettime(CLOCK_MONOTONIC, &iteration_start);
-				}
+			if (i >= opts.warmup_iterations) {
+				clock_gettime(CLOCK_MONOTONIC, &iteration_start);
+			}
 
 			if (opts.transfer_size <= inject_size)
 				ret = ft_inject(ep, remote_fi_addr,
@@ -238,9 +237,9 @@ static int pingpong_no_pre_posted_rx(size_t inject_size)
 			if (i == opts.warmup_iterations)
 				ft_start();
 
-				if (i >= opts.warmup_iterations) {
-					clock_gettime(CLOCK_MONOTONIC, &iteration_start);
-				}
+			if (i >= opts.warmup_iterations) {
+				clock_gettime(CLOCK_MONOTONIC, &iteration_start);
+			}
 
 			if (opts.transfer_size <= inject_size)
 				ret = ft_inject(ep, remote_fi_addr,
@@ -390,7 +389,6 @@ int pingpong(void)
 		if (opts.dst_addr) {
 		  print_benchmark_performance_as_csv(
 		  	iterations_timestamps,
-				iterations_cycles,
 		  	opts.iterations,
 		  	opts.transfer_size);
 		} else {
@@ -471,7 +469,6 @@ int pingpong_rma(enum ft_rma_opcodes rma_op, struct fi_rma_iov *remote)
 
 	struct timespec iteration_start;
 	struct timespec iteration_end;
-	long long cycles_no;
 
 	int ret, i;
 	size_t inject_size = fi->tx_attr->inject_size;
@@ -595,7 +592,6 @@ int pingpong_rma(enum ft_rma_opcodes rma_op, struct fi_rma_iov *remote)
 		if (opts.dst_addr) {
 		  print_benchmark_performance_as_csv(
 		  	iterations_timestamps,
-				iterations_cycles,
 		  	opts.iterations,
 		  	opts.transfer_size);
 		} else {
