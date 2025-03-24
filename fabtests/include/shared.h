@@ -266,7 +266,7 @@ extern struct fi_rma_iov remote;
 
 extern char test_name[50];
 
-extern // For measuring roundtrip latency
+// For measuring roundtrip latency
 extern struct timespec start, end;
 extern struct timespec *iterations_timestamps;
 
