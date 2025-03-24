@@ -149,12 +149,7 @@ void print_benchmark_performance_as_csv(struct timespec *iterations_timestamps,
 			// Duration is roundtrip latency, so we need to divide
 			// it by 2 to get one-way latency
 			double half_duration_us = (duration_ns / 1000.0) / 2.0;
-
-			if (opts.measure_cycles)
-				printf("%lu, %lf, %lld\n", i, half_duration_us,
-				       iterations_cycles[i]);
-			else
-				printf("%lu, %lf\n", i, half_duration_us);
+			printf("%lu, %lf\n", i, half_duration_us);
 		}
 	}
 }
@@ -401,7 +396,6 @@ int pingpong(void)
 
 	// Free memory containing timestamp data, it was already returned to the user
 	free(iterations_timestamps);
-	free(iterations_cycles);
 	free(counted_send_cycles);
 	free(counted_receive_cycles);
 
@@ -604,7 +598,6 @@ int pingpong_rma(enum ft_rma_opcodes rma_op, struct fi_rma_iov *remote)
 
 	// Free memory containing timestamp data, it was already returned to the user
 	free(iterations_timestamps);
-	free(iterations_cycles);
 
 	return 0;
 }
