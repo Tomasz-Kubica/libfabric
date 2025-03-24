@@ -265,10 +265,17 @@ extern struct fi_cntr_attr cntr_attr;
 extern struct fi_rma_iov remote;
 
 extern char test_name[50];
+
+extern // For measuring roundtrip latency
 extern struct timespec start, end;
 extern struct timespec *iterations_timestamps;
-extern long long *iterations_cycles;
-extern struct ft_opts opts;
+
+// For measuring cycles of libfabric calls
+extern int libfabric_calls_event_set;
+extern size_t libfabric_send_calls_counter;
+extern size_t libfabric_receive_calls_counter;
+extern long long *counted_send_cycles;
+extern long long *counted_receive_cycles;
 
 void ft_parseinfo(int op, char *optarg, struct fi_info *hints,
 		  struct ft_opts *opts);
