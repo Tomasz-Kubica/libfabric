@@ -120,58 +120,53 @@ void print_benchmark_performance_as_json(
 		printf("}\n");
 }
 
-void print_benchmark_performance_as_csv(
-	struct timespec *iterations_timestamps,
-	long long *iterations_cycles,
-	size_t iterations_no,
-	size_t msg_size) {
-		if (opts.measure_cycles)
-			printf("#,usec,cycles\n");
-		else
-			printf("#,usec\n");
-		
+void print_benchmark_performance_as_csv(struct timespec *iterations_timestamps,
+					long long *iterations_cycles,
+					size_t iterations_no, size_t msg_size)
+{
+	if (opts.measure_cycles) {
+		printf("#,send_cycles");
+		if (counted_receive_cycles != NULL)
+			printf(",receive_cycles");
+		printf("\n");
+
+		for (size_t i = 0; i < iterations_no; i++) {
+			printf("%lu, %lld", i, counted_send_cycles[i]);
+			if (counted_receive_cycles != NULL)
+				printf(", %lld", counted_receive_cycles[i]);
+			printf("\n");
+		}
+
+	} else {
+		printf("#,usec\n");
+
 		for (size_t i = 0; i < iterations_no; i++) {
 			struct timespec start = iterations_timestamps[i * 2];
 			struct timespec end = iterations_timestamps[i * 2 + 1];
-			uint64_t start_ns = start.tv_sec * 1000000000 + start.tv_nsec;
+			uint64_t start_ns =
+				start.tv_sec * 1000000000 + start.tv_nsec;
 			uint64_t end_ns = end.tv_sec * 1000000000 + end.tv_nsec;
 			uint64_t duration_ns = end_ns - start_ns;
-			// Duration is roundtrip latency, so we need to divide it by 2
-			// to get one-way latency
+			// Duration is roundtrip latency, so we need to divide
+			// it by 2 to get one-way latency
 			double half_duration_us = (duration_ns / 1000.0) / 2.0;
 
 			if (opts.measure_cycles)
-				printf("%lu, %lf, %lld\n", i, half_duration_us, iterations_cycles[i]);
+				printf("%lu, %lf, %lld\n", i, half_duration_us,
+				       iterations_cycles[i]);
 			else
 				printf("%lu, %lf\n", i, half_duration_us);
 		}
+	}
 }
 
 /* Pingpong latency test with pre-posted receive buffers. */
 static int pingpong_pre_posted_rx(size_t inject_size)
 {
-	int EventSet = PAPI_NULL;
-
-	if (opts.measure_cycles) {
-  	// Initialize the PAPI library
-  	if (PAPI_library_init(PAPI_VER_CURRENT) != PAPI_VER_CURRENT)
-  	  exit(1);
-
-		// Create the event set
-  	if (PAPI_create_eventset(&EventSet) != PAPI_OK)
-  	  exit(1);
-
-		// Add total CPU cycles to the event set
-  	if (PAPI_add_event(EventSet, PAPI_TOT_CYC) != PAPI_OK)
-  	  exit(1);
-	}
-
 	int ret, i;
 
 	struct timespec iteration_start;
 	struct timespec iteration_end;
-
-	long long cycles_no;
 
 	if (opts.dst_addr) {
 		for (i = 0; i < opts.iterations + opts.warmup_iterations; i++) {
@@ -180,10 +175,6 @@ static int pingpong_pre_posted_rx(size_t inject_size)
 
 				if (i >= opts.warmup_iterations) {
 					clock_gettime(CLOCK_MONOTONIC, &iteration_start);
-	
-					// Start counting cycles
-					if (opts.measure_cycles)
-						PAPI_start(EventSet);
 				}
 
 			if (opts.transfer_size <= inject_size)
@@ -195,22 +186,19 @@ static int pingpong_pre_posted_rx(size_t inject_size)
 			if (ret)
 				return ret;
 
+			libfabric_send_calls_counter++;
+
 			ret = ft_rx(ep, opts.transfer_size);
 			if (ret)
 				return ret;
 
-			if (i >= opts.warmup_iterations) {
-        // Stop counting cycles
-				if (opts.measure_cycles)
-  				PAPI_stop(EventSet, &cycles_no);
+			libfabric_receive_calls_counter++;
 
+			if (i >= opts.warmup_iterations) {
 				clock_gettime(CLOCK_MONOTONIC, &iteration_end);
 
 				iterations_timestamps[(i - opts.warmup_iterations) * 2] = iteration_start;
 				iterations_timestamps[(i - opts.warmup_iterations) * 2 + 1] = iteration_end;
-
-				if (opts.measure_cycles)
-					iterations_cycles[i - opts.warmup_iterations] = cycles_no;
 			}
 		}
 	} else {
@@ -240,26 +228,8 @@ static int pingpong_pre_posted_rx(size_t inject_size)
 /* Pingpong latency test without pre-posted receive buffers. */
 static int pingpong_no_pre_posted_rx(size_t inject_size)
 {
-  int EventSet = PAPI_NULL;
-
-	if (opts.measure_cycles) {
-		// Initialize the PAPI library
-  	if (PAPI_library_init(PAPI_VER_CURRENT) != PAPI_VER_CURRENT)
-  	  exit(1);
-
-		// Create the event set
-  	if (PAPI_create_eventset(&EventSet) != PAPI_OK)
-  	  exit(1);
-
-		// Add total CPU cycles to the event set
-  	if (PAPI_add_event(EventSet, PAPI_TOT_CYC) != PAPI_OK)
-  	  exit(1);
-	}
-
   struct timespec iteration_start;
 	struct timespec iteration_end;
-
-	long long cycles_no;
 
 	int ret, i;
 
@@ -270,10 +240,6 @@ static int pingpong_no_pre_posted_rx(size_t inject_size)
 
 				if (i >= opts.warmup_iterations) {
 					clock_gettime(CLOCK_MONOTONIC, &iteration_start);
-	
-					// Start counting cycles
-					if (opts.measure_cycles)
-						PAPI_start(EventSet);
 				}
 
 			if (opts.transfer_size <= inject_size)
@@ -285,26 +251,23 @@ static int pingpong_no_pre_posted_rx(size_t inject_size)
 			if (ret)
 				return ret;
 
+			libfabric_send_calls_counter++;
+
 			ret = ft_post_rx(ep, opts.transfer_size, &rx_ctx);
 			if (ret)
 				return ret;
+
+			libfabric_receive_calls_counter++;
 
 			ret = ft_get_rx_comp(rx_seq);
 			if (ret)
 				return ret;
 
 			if (i >= opts.warmup_iterations) {
-        // Stop counting cycles
-				if (opts.measure_cycles)
-  				PAPI_stop(EventSet, &cycles_no);
-
 				clock_gettime(CLOCK_MONOTONIC, &iteration_end);
 
 				iterations_timestamps[(i - opts.warmup_iterations) * 2] = iteration_start;
 				iterations_timestamps[(i - opts.warmup_iterations) * 2 + 1] = iteration_end;
-
-				if (opts.measure_cycles)
-					iterations_cycles[i - opts.warmup_iterations] = cycles_no;
 			}
 		}
 	} else {
@@ -315,6 +278,8 @@ static int pingpong_no_pre_posted_rx(size_t inject_size)
 			ret = ft_post_rx(ep, opts.transfer_size, &rx_ctx);
 			if (ret)
 				return ret;
+
+			libfabric_receive_calls_counter++;
 
 			ret = ft_get_rx_comp(rx_seq);
 			if (ret)
@@ -335,6 +300,8 @@ static int pingpong_no_pre_posted_rx(size_t inject_size)
 					    opts.transfer_size, &tx_ctx);
 			if (ret)
 				return ret;
+
+			libfabric_send_calls_counter++;
 		}
 	}
 	ft_stop();
@@ -347,7 +314,32 @@ int pingpong(void)
   // Alloc memory for roundtrip latency for every iteration (not including warmup interation)
 	// Two timestamps per iteration - start and end
 	iterations_timestamps = malloc(sizeof(struct timespec) * opts.iterations * 2);
-	iterations_cycles = malloc(sizeof(long long) * opts.iterations);
+	
+	counted_send_cycles = malloc(sizeof(long long) * opts.iterations);
+	counted_receive_cycles = malloc(sizeof(long long) * opts.iterations);
+	libfabric_send_calls_counter = 0;
+	libfabric_receive_calls_counter = 0;
+	libfabric_calls_event_set = PAPI_NULL;
+
+	if (opts.measure_cycles) {
+		// Initialize the PAPI library
+  	if (PAPI_library_init(PAPI_VER_CURRENT) != PAPI_VER_CURRENT) {
+			printf("PAPI_library_init failed\n");
+  	  exit(1);
+		}
+
+		// Create the event set
+  	if (PAPI_create_eventset(&libfabric_calls_event_set) != PAPI_OK) {
+			printf("PAPI_create_eventset failed\n");
+  	  exit(1);
+		}
+
+		// Add total CPU cycles to the event set
+  	if (PAPI_add_event(libfabric_calls_event_set, PAPI_TOT_CYC) != PAPI_OK) {
+			printf("PAPI_add_event failed\n");
+  	  exit(1);
+		}
+	}
 
 	int ret;
 	size_t inject_size = fi->tx_attr->inject_size;
@@ -412,6 +404,8 @@ int pingpong(void)
 	// Free memory containing timestamp data, it was already returned to the user
 	free(iterations_timestamps);
 	free(iterations_cycles);
+	free(counted_send_cycles);
+	free(counted_receive_cycles);
 
 	return 0;
 }
@@ -449,9 +443,11 @@ int pingpong_rma(enum ft_rma_opcodes rma_op, struct fi_rma_iov *remote)
   // Alloc memory for roundtrip latency for every iteration (not including warmup interation)
 	// Two timestamps per iteration - start and end
 	iterations_timestamps = malloc(sizeof(struct timespec) * opts.iterations * 2);
-	iterations_cycles = malloc(sizeof(long long) * opts.iterations);
-
-	int EventSet = PAPI_NULL;
+	
+	counted_send_cycles = malloc(sizeof(long long) * opts.iterations);
+	counted_receive_cycles = NULL;
+	libfabric_send_calls_counter = 0;
+	libfabric_calls_event_set = PAPI_NULL;
 
 	if (opts.measure_cycles) {
 		// Initialize the PAPI library
@@ -461,13 +457,13 @@ int pingpong_rma(enum ft_rma_opcodes rma_op, struct fi_rma_iov *remote)
 		}
 
 		// Create the event set
-  	if (PAPI_create_eventset(&EventSet) != PAPI_OK) {
+  	if (PAPI_create_eventset(&libfabric_calls_event_set) != PAPI_OK) {
 			printf("PAPI_create_eventset failed\n");
   	  exit(1);
 		}
 
 		// Add total CPU cycles to the event set
-  	if (PAPI_add_event(EventSet, PAPI_TOT_CYC) != PAPI_OK) {
+  	if (PAPI_add_event(libfabric_calls_event_set, PAPI_TOT_CYC) != PAPI_OK) {
 			printf("PAPI_add_event failed\n");
   	  exit(1);
 		}
@@ -521,10 +517,6 @@ int pingpong_rma(enum ft_rma_opcodes rma_op, struct fi_rma_iov *remote)
 
 			if (i >= opts.warmup_iterations) {
 				clock_gettime(CLOCK_MONOTONIC, &iteration_start);
-
-				// Start counting cycles
-				if (opts.measure_cycles)
-  				PAPI_start(EventSet);
 			}
 
 			if (rma_op == FT_RMA_WRITE)
@@ -540,22 +532,19 @@ int pingpong_rma(enum ft_rma_opcodes rma_op, struct fi_rma_iov *remote)
 			if (ret)
 				return ret;
 
+			// After performing libfabric call, increment the counter 
+			//so the next measurement will be saved in the next cell.
+			libfabric_send_calls_counter++;
+
 			ret = ft_rx_rma(i, rma_op, ep, opts.transfer_size);
 			if (ret)
 				return ret;
 
 			if (i >= opts.warmup_iterations) {
-        // Stop counting cycles
-				if (opts.measure_cycles)
-  				PAPI_stop(EventSet, &cycles_no);
-
 				clock_gettime(CLOCK_MONOTONIC, &iteration_end);
 
 				iterations_timestamps[(i - opts.warmup_iterations) * 2] = iteration_start;
 				iterations_timestamps[(i - opts.warmup_iterations) * 2 + 1] = iteration_end;
-
-				if (opts.measure_cycles)
-					iterations_cycles[i - opts.warmup_iterations] = cycles_no;
 			}
 		}
 	} else {
@@ -568,7 +557,7 @@ int pingpong_rma(enum ft_rma_opcodes rma_op, struct fi_rma_iov *remote)
 
 				// Start counting cycles
 				if (opts.measure_cycles)
-  				PAPI_start(EventSet);
+  				PAPI_start(libfabric_calls_event_set);
 			}
 
 			ret = ft_rx_rma(i, rma_op, ep, opts.transfer_size);
@@ -588,18 +577,15 @@ int pingpong_rma(enum ft_rma_opcodes rma_op, struct fi_rma_iov *remote)
 			if (ret)
 				return ret;
 
-			if (i >= opts.warmup_iterations) {
-        // Stop counting cycles
-				if (opts.measure_cycles)
-  				PAPI_stop(EventSet, &cycles_no);
+			// After performing libfabric call, increment the counter 
+			//so the next measurement will be saved in the next cell.
+			libfabric_send_calls_counter++;
 
+			if (i >= opts.warmup_iterations) {
 				clock_gettime(CLOCK_MONOTONIC, &iteration_end);
 
 				iterations_timestamps[(i - opts.warmup_iterations) * 2] = iteration_start;
 				iterations_timestamps[(i - opts.warmup_iterations) * 2 + 1] = iteration_end;
-
-				if (opts.measure_cycles)
-					iterations_cycles[i - opts.warmup_iterations] = cycles_no;
 			}
 		}
 	}
