@@ -545,10 +545,6 @@ int pingpong_rma(enum ft_rma_opcodes rma_op, struct fi_rma_iov *remote)
 
 			if (i >= opts.warmup_iterations) {
 				clock_gettime(CLOCK_MONOTONIC, &iteration_start);
-
-				// Start counting cycles
-				if (opts.measure_cycles)
-  				PAPI_start(libfabric_calls_event_set);
 			}
 
 			ret = ft_rx_rma(i, rma_op, ep, opts.transfer_size);

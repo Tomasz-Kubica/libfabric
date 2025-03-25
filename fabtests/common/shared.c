@@ -60,8 +60,10 @@
 // Macros for measuring cycles of libfabric calls
 #define START_CYCLES() \
     do { \
-        if (opts.measure_cycles) \
+        if (opts.measure_cycles) { \
+						fprintf(stderr, "Start measuring cycles\n"); \
             PAPI_start(libfabric_calls_event_set); \
+				} \
     } while (0)
 
 #define STOP_CYCLES(index, cycle_array) \
@@ -69,10 +71,11 @@
 			  long long cycles; \
         if (opts.measure_cycles) { \
             PAPI_stop(libfabric_calls_event_set, &cycles); \
+						fprintf(stderr, "Stop measuring cycles (%s=%d, %s)\n", #index, index, #cycle_array); \
 						if (cycle_array != NULL) \
 							cycle_array[index] = cycles; \
 						else \
-							printf("Cycles measured but cycle array (%s) is NULL\n", #cycle_array); \
+							fprintf(stderr, "Cycles measured but cycles array (%s) is NULL\n", #cycle_array); \
 				} \
     } while (0)
 
