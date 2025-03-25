@@ -63,13 +63,11 @@
         if (opts.measure_cycles && papi_initialized) { \
 						fprintf(stderr, "Start measuring cycles Line=%d File=%s\n", __LINE__, __FILE__); \
             PAPI_start(libfabric_calls_event_set); \
-						fprintf(stderr, "Start measuring cycles post papi call\n"); \
 					} \
     } while (0)
 
 #define STOP_CYCLES(index, cycle_array) \
     do { \
-			  fprintf(stderr, "Stop measuring cycles Line=%d File=%s\n", __LINE__, __FILE__); \
 			  long long cycles; \
         if (opts.measure_cycles && papi_initialized) { \
             PAPI_stop(libfabric_calls_event_set, &cycles); \
