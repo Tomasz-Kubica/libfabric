@@ -69,11 +69,11 @@
 
 #define STOP_CYCLES(index, cycle_array) \
     do { \
-			  fprintf(stderr, "Stop measuring cycles Line=%d File=%s\n", __LINE_, __FILE___); \
+			  fprintf(stderr, "Stop measuring cycles Line=%d File=%s\n", __LINE__, __FILE__); \
 			  long long cycles; \
         if (opts.measure_cycles) { \
             PAPI_stop(libfabric_calls_event_set, &cycles); \
-						fprintf(stderr, "Stop measuring cycles (%s=%ld, index=%s) Line=%d File=%s\n", #index, index, #cycle_array, __LINE_, __FILE___); \
+						fprintf(stderr, "Stop measuring cycles (%s=%ld, index=%s) Line=%d File=%s\n", #index, index, #cycle_array, __LINE__, __FILE__); \
 						if (cycle_array != NULL) \
 							cycle_array[index] = cycles; \
 						else \
