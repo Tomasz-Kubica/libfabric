@@ -70,7 +70,7 @@
         if (opts.measure_cycles) { \
             PAPI_stop(libfabric_calls_event_set, &cycles); \
 						if (cycle_array != NULL) \
-							&cycle_array[index] = cycles; \
+							cycle_array[index] = cycles; \
 						else \
 							printf("Cycles measured but cycle array (%s) is NULL\n", #cycle_array); \
 				} \
