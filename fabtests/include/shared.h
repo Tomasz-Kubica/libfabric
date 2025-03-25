@@ -273,6 +273,7 @@ extern struct timespec start, end;
 extern struct timespec *iterations_timestamps;
 
 // For measuring cycles of libfabric calls
+extern bool papi_initialized;
 extern int libfabric_calls_event_set;
 extern size_t libfabric_send_calls_counter;
 extern size_t libfabric_receive_calls_counter;

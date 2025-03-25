@@ -333,6 +333,9 @@ int pingpong(void)
 			printf("PAPI_add_event failed\n");
   	  exit(1);
 		}
+
+		fprintf(stderr, "PAPI event set created event_set=%d\n", libfabric_calls_event_set);
+		papi_initialized = true;
 	}
 
 	int ret;
@@ -459,6 +462,9 @@ int pingpong_rma(enum ft_rma_opcodes rma_op, struct fi_rma_iov *remote)
 			printf("PAPI_add_event failed\n");
   	  exit(1);
 		}
+
+		fprintf(stderr, "PAPI event set created event_set=%d\n", libfabric_calls_event_set);
+		papi_initialized = true;
 	}
 
 	struct timespec iteration_start;

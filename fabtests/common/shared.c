@@ -60,7 +60,7 @@
 // Macros for measuring cycles of libfabric calls
 #define START_CYCLES() \
     do { \
-        if (opts.measure_cycles) { \
+        if (opts.measure_cycles && papi_initialized) { \
 						fprintf(stderr, "Start measuring cycles Line=%d File=%s\n", __LINE__, __FILE__); \
             PAPI_start(libfabric_calls_event_set); \
 						fprintf(stderr, "Start measuring cycles post papi call\n"); \
@@ -71,7 +71,7 @@
     do { \
 			  fprintf(stderr, "Stop measuring cycles Line=%d File=%s\n", __LINE__, __FILE__); \
 			  long long cycles; \
-        if (opts.measure_cycles) { \
+        if (opts.measure_cycles && papi_initialized) { \
             PAPI_stop(libfabric_calls_event_set, &cycles); \
 						fprintf(stderr, "Stop measuring cycles (%s=%ld, index=%s) Line=%d File=%s\n", #index, index, #cycle_array, __LINE__, __FILE__); \
 						if (cycle_array != NULL) \
@@ -136,6 +136,7 @@ struct timespec start, end;
 struct timespec *iterations_timestamps;
 
 // For measuring cycles of libfabric calls
+bool papi_initialized = false;
 int libfabric_calls_event_set;
 size_t libfabric_send_calls_counter;
 size_t libfabric_receive_calls_counter;
