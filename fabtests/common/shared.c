@@ -54,6 +54,8 @@
 #include "shared.h"
 #include "hmem.h"
 
+#include "papi.h"
+
 
 // Macros for measuring cycles of libfabric calls
 #define START_CYCLES() \
