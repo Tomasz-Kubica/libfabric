@@ -54,6 +54,26 @@
 #include "shared.h"
 #include "hmem.h"
 
+
+// Macros for measuring cycles of libfabric calls
+#define START_CYCLES() \
+    do { \
+        if (opts.measure_cycles) \
+            PAPI_start(libfabric_calls_event_set); \
+    } while (0)
+
+#define STOP_CYCLES(index, cycle_array) \
+    do { \
+			  long long cycles; \
+        if (opts.measure_cycles) { \
+            PAPI_stop(libfabric_calls_event_set, &cycles); \
+						if (cycle_array != NULL) \
+							&cycle_array[index] = cycles; \
+						else \
+							printf("Cycles measured but cycle array (%s) is NULL\n", #cycle_array); \
+				} \
+    } while (0)
+
 struct fi_info *fi_pep, *fi, *hints;
 struct fid_fabric *fabric;
 struct fid_wait *waitset;
@@ -2237,46 +2257,38 @@ ssize_t ft_post_tx_buf(struct fid_ep *ep, fi_addr_t fi_addr, size_t size,
 		op_tag = op_tag ? op_tag : tx_seq;
 		if (data != NO_CQ_DATA) {
 			// Start counting cycles
-			if (opts.measure_cycles)
-				PAPI_start(libfabric_calls_event_set);
+			START_CYCLES();
 			FT_POST(fi_tsenddata, ft_progress, txcq, tx_seq,
 				&tx_cq_cntr, "transmit", ep, op_buf, size,
 				op_mr_desc, data, fi_addr, op_tag, ctx);
 			// Stop counting cycles
-			if (opts.measure_cycles)
-				PAPI_stop(libfabric_calls_event_set, &counted_send_cycles[libfabric_send_calls_counter]);
+			STOP_CYCLES(libfabric_send_calls_counter, counted_send_cycles);
 		} else {
 			// Start counting cycles
-			if (opts.measure_cycles)
-				PAPI_start(libfabric_calls_event_set);
+			START_CYCLES();
 			FT_POST(fi_tsend, ft_progress, txcq, tx_seq,
 				&tx_cq_cntr, "transmit", ep, op_buf, size,
 				op_mr_desc, fi_addr, op_tag, ctx);
 			// Stop counting cycles
-			if (opts.measure_cycles)
-				PAPI_stop(libfabric_calls_event_set, &counted_send_cycles[libfabric_send_calls_counter]);
+			STOP_CYCLES(libfabric_send_calls_counter, counted_send_cycles);
 		}
 	} else {
 		if (data != NO_CQ_DATA) {
 			// Start counting cycles
-			if (opts.measure_cycles)
-				PAPI_start(libfabric_calls_event_set);
+			START_CYCLES();
 			FT_POST(fi_senddata, ft_progress, txcq, tx_seq,
 				&tx_cq_cntr, "transmit", ep, op_buf, size,
 				op_mr_desc, data, fi_addr, ctx);
 			// Stop counting cycles
-			if (opts.measure_cycles)
-				PAPI_stop(libfabric_calls_event_set, &counted_send_cycles[libfabric_send_calls_counter]);
+			STOP_CYCLES(libfabric_send_calls_counter, counted_send_cycles);
 		} else {
 			// Start counting cycles
-			if (opts.measure_cycles)
-				PAPI_start(libfabric_calls_event_set);
+			START_CYCLES();
 			FT_POST(fi_send, ft_progress, txcq, tx_seq,
 				&tx_cq_cntr, "transmit", ep, op_buf, size,
 				op_mr_desc, fi_addr, ctx);
 			// Stop counting cycles
-			if (opts.measure_cycles)
-				PAPI_stop(libfabric_calls_event_set, &counted_send_cycles[libfabric_send_calls_counter]);
+			STOP_CYCLES(libfabric_send_calls_counter, counted_send_cycles);
 		}
 	}
 	return 0;
@@ -2419,40 +2431,34 @@ ssize_t ft_post_rma(enum ft_rma_opcodes op, char *buf, size_t size,
 	switch (op) {
 	case FT_RMA_WRITE:
 	  // Start counting cycles
-		if (opts.measure_cycles)
-		  PAPI_start(libfabric_calls_event_set);
+		START_CYCLES();
 		FT_POST(fi_write, ft_progress, txcq, tx_seq, &tx_cq_cntr,
 			"fi_write", ep, buf, size, mr_desc,
 			remote_fi_addr, remote->addr + ft_remote_write_offset(buf),
 			remote->key, context);
 		// Stop counting cycles
-		if (opts.measure_cycles)
-		  PAPI_stop(libfabric_calls_event_set, &counted_send_cycles[libfabric_send_calls_counter]);
+		STOP_CYCLES(libfabric_send_calls_counter, counted_send_cycles);
 		break;
 	case FT_RMA_WRITEDATA:
 	  // Start counting cycles
-		if (opts.measure_cycles)
-		  PAPI_start(libfabric_calls_event_set);
+		START_CYCLES();
 		FT_POST(fi_writedata, ft_progress, txcq, tx_seq, &tx_cq_cntr,
 			"fi_writedata", ep, buf, size, mr_desc,
 			remote_cq_data, remote_fi_addr,
 			remote->addr + ft_remote_write_offset(buf),
 			remote->key, context);
 		// Stop counting cycles
-		if (opts.measure_cycles)
-		  PAPI_stop(libfabric_calls_event_set, &counted_send_cycles[libfabric_send_calls_counter]);
+		STOP_CYCLES(libfabric_send_calls_counter, counted_send_cycles);
 		break;
 	case FT_RMA_READ:
 	  // Start counting cycles
-		if (opts.measure_cycles)
-		  PAPI_start(libfabric_calls_event_set);
+		START_CYCLES();
 		FT_POST(fi_read, ft_progress, txcq, tx_seq, &tx_cq_cntr,
 			"fi_read", ep, buf, size, mr_desc,
 			remote_fi_addr, remote->addr + ft_remote_read_offset(buf),
 			remote->key, context);
 		// Stop counting cycles
-		if (opts.measure_cycles)
-		  PAPI_stop(libfabric_calls_event_set, &counted_send_cycles[libfabric_send_calls_counter]);
+		STOP_CYCLES(libfabric_send_calls_counter, counted_send_cycles);
 		break;
 	default:
 		FT_ERR("Unknown RMA op type\n");
@@ -2620,23 +2626,19 @@ ssize_t ft_post_rx_buf(struct fid_ep *ep, size_t size, void *ctx,
 	if (hints->caps & FI_TAGGED) {
 		op_tag = op_tag ? op_tag : rx_seq;
 		// Start counting cycles
-		if (opts.measure_cycles)
-		  PAPI_start(libfabric_calls_event_set);
+		START_CYCLES();
 		FT_POST(fi_trecv, ft_progress, rxcq, rx_seq, &rx_cq_cntr,
 			"receive", ep, op_buf, size, op_mr_desc,
 			remote_fi_addr, op_tag, 0, ctx);
 		// Stop counting cycles
-		if (opts.measure_cycles)
-		  PAPI_stop(libfabric_calls_event_set, &counted_receive_cycles[libfabric_receive_calls_counter]);
+		STOP_CYCLES(libfabric_receive_calls_counter, counted_receive_cycles);
 	} else {
 		// Start counting cycles
-		if (opts.measure_cycles)
-		  PAPI_start(libfabric_calls_event_set);
+		START_CYCLES();
 		FT_POST(fi_recv, ft_progress, rxcq, rx_seq, &rx_cq_cntr,
 			"receive", ep, op_buf, size, op_mr_desc, remote_fi_addr, ctx);
 		// Stop counting cycles
-		if (opts.measure_cycles)
-		  PAPI_stop(libfabric_calls_event_set, &counted_receive_cycles[libfabric_receive_calls_counter]);
+		STOP_CYCLES(libfabric_receive_calls_counter, counted_receive_cycles);
 	}
 	return 0;
 }
