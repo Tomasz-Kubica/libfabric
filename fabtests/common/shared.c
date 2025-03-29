@@ -2348,23 +2348,31 @@ ssize_t ft_post_inject_buf(struct fid_ep *ep, fi_addr_t fi_addr, size_t size,
 {
 	if (hints->caps & FI_TAGGED) {
 		if (data != NO_CQ_DATA) {
+			START_CYCLES();
 			FT_POST(fi_tinjectdata, ft_progress, txcq, tx_seq, &tx_cq_cntr,
 				"inject", ep, op_buf, size + ft_tx_prefix_size(),
 				data, fi_addr, op_tag);
+			STOP_CYCLES(libfabric_send_calls_counter, counted_send_cycles);
 		} else {
+			START_CYCLES();
 			FT_POST(fi_tinject, ft_progress, txcq, tx_seq, &tx_cq_cntr,
 				"inject", ep, op_buf, size + ft_tx_prefix_size(),
 				fi_addr, op_tag);
+			STOP_CYCLES(libfabric_send_calls_counter, counted_send_cycles);
 		}
 	} else {
 		if (data != NO_CQ_DATA) {
+			START_CYCLES();
 			FT_POST(fi_injectdata, ft_progress, txcq, tx_seq, &tx_cq_cntr,
 				"inject", ep, op_buf, size + ft_tx_prefix_size(),
 				data, fi_addr);
+		  STOP_CYCLES(libfabric_send_calls_counter, counted_send_cycles);
 		} else {
+			START_CYCLES();
 			FT_POST(fi_inject, ft_progress, txcq, tx_seq, &tx_cq_cntr,
 				"inject", ep, op_buf, size + ft_tx_prefix_size(),
 				fi_addr);
+			STOP_CYCLES(libfabric_send_calls_counter, counted_send_cycles);
 		}
 	}
 
@@ -2477,16 +2485,24 @@ ssize_t ft_post_rma_inject(enum ft_rma_opcodes op, char *buf, size_t size,
 {
 	switch (op) {
 	case FT_RMA_WRITE:
+	  // Start counting cycles
+		START_CYCLES();
 		FT_POST(fi_inject_write, ft_progress, txcq, tx_seq, &tx_cq_cntr,
 			"fi_inject_write", ep, buf, opts.transfer_size,
 			remote_fi_addr, remote->addr + ft_remote_write_offset(buf),
 			remote->key);
 		break;
+		// Stop counting cycles
+		STOP_CYCLES(libfabric_send_calls_counter, counted_send_cycles);
 	case FT_RMA_WRITEDATA:
+	  // Start counting cycles
+		START_CYCLES();
 		FT_POST(fi_inject_writedata, ft_progress, txcq, tx_seq,
 			&tx_cq_cntr, "fi_inject_writedata", ep, buf,
 			opts.transfer_size, remote_cq_data, remote_fi_addr,
 			remote->addr + ft_remote_write_offset(buf), remote->key);
+		// Stop counting cycles
+		STOP_CYCLES(libfabric_send_calls_counter, counted_send_cycles);
 		break;
 	default:
 		FT_ERR("Unknown RMA inject op type\n");
