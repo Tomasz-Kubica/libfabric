@@ -108,7 +108,7 @@ int main(int argc, char **argv)
 		opts.dst_addr = argv[optind];
 
   // Change endpoint type to FI_EP_DGRAM if provider name is set to UDP
-	if (opts.provider && (strstr(opts.provider, "udp") || strstr(opts.provider, "UDP"))) {
+	if (hints->fabric_attr && (strstr(hints->fabric_attr->prov_name, "udp") || strstr(hints->fabric_attr->prov_name, "UDP"))) {
 		hints->ep_attr->type = FI_EP_DGRAM;
 	} else {
 		// If not then use the original default endpoint type
