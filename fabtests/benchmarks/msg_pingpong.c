@@ -107,7 +107,14 @@ int main(int argc, char **argv)
 	if (optind < argc)
 		opts.dst_addr = argv[optind];
 
-	hints->ep_attr->type = FI_EP_MSG;
+  // Change endpoint type to FI_EP_DGRAM if provider name is set to UDP
+	if (opts.provider && (strstr(opts.provider, "udp") || strstr(opts.provider, "UDP"))) {
+		hints->ep_attr->type = FI_EP_DGRAM;
+	} else {
+		// If not then use the original default endpoint type
+		hints->ep_attr->type = FI_EP_MSG;
+	}
+
 	if (hints->caps & FI_TAGGED) {
 		opts.options |= FT_OPT_SRX;
 		hints->ep_attr->rx_ctx_cnt = FI_SHARED_CONTEXT;
