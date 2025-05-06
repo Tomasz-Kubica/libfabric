@@ -1081,6 +1081,70 @@ int ft_close_oob()
 	return 0;
 }
 
+#define VERBOSE_LOG(fmt, ...)                    \
+    do {                                         \
+        if (1) {                   \
+            fprintf(stderr, fmt, ##__VA_ARGS__); \
+        }                                        \
+    } while (0)
+
+		void print_fi_info(const struct fi_info *fi) {
+			if (!fi) {
+					VERBOSE_LOG("fi_info is NULL\n");
+					return;
+			}
+	
+			VERBOSE_LOG("caps:           0x%016lx\n", fi->caps);
+			VERBOSE_LOG("mode:           0x%016lx\n", fi->mode);
+			VERBOSE_LOG("addr_format:    %u\n", fi->addr_format);
+			VERBOSE_LOG("src_addrlen:    %zu\n", fi->src_addrlen);
+			VERBOSE_LOG("dest_addrlen:   %zu\n", fi->dest_addrlen);
+	
+			if (fi->ep_attr) {
+					VERBOSE_LOG("Endpoint Attributes (ep_attr):\n");
+					VERBOSE_LOG("  ep_attr->type:        %u\n", fi->ep_attr->type);
+					VERBOSE_LOG("  ep_attr->protocol:    %u\n", fi->ep_attr->protocol);
+					VERBOSE_LOG("  ep_attr->max_msg_size: %zu\n", fi->ep_attr->max_msg_size);
+					VERBOSE_LOG("  ep_attr->msg_prefix_size: %zu\n", fi->ep_attr->msg_prefix_size);
+					VERBOSE_LOG("  ep_attr->max_order_raw_size: %zu\n", fi->ep_attr->max_order_raw_size);
+					VERBOSE_LOG("  ep_attr->max_order_war_size: %zu\n", fi->ep_attr->max_order_war_size);
+					VERBOSE_LOG("  ep_attr->max_order_waw_size: %zu\n", fi->ep_attr->max_order_waw_size);
+			}
+	
+			if (fi->domain_attr) {
+					VERBOSE_LOG("Domain Attributes (domain_attr):\n");
+					VERBOSE_LOG("  domain:               %14s\n", fi->domain_attr->name);
+					VERBOSE_LOG("  mr_mode:              0x%016lx\n", fi->domain_attr->mr_mode);
+					VERBOSE_LOG("  control_progress:     %u\n", fi->domain_attr->control_progress);
+					VERBOSE_LOG("  data_progress:        %u\n", fi->domain_attr->data_progress);
+					VERBOSE_LOG("  resource_mgmt:        %u\n", fi->domain_attr->resource_mgmt);
+					VERBOSE_LOG("  av_type:              %u\n", fi->domain_attr->av_type);
+					VERBOSE_LOG("  memory_region_types:  0x%016lx\n", fi->domain_attr->mr_key_size);
+			}
+	
+			if (fi->fabric_attr) {
+					VERBOSE_LOG("Fabric Attributes (fabric_attr):\n");
+					VERBOSE_LOG("  fabric:               %14s\n", fi->fabric_attr->name);
+					VERBOSE_LOG("  provider:             %14s\n", fi->fabric_attr->prov_name);
+					VERBOSE_LOG("  api_version:          %u.%u\n", FI_MAJOR(fi->fabric_attr->prov_version), FI_MINOR(fi->fabric_attr->prov_version));
+			}
+	
+			if (fi->tx_attr) {
+					VERBOSE_LOG("Transmit Attributes (tx_attr):\n");
+					VERBOSE_LOG("  tx_attr->op_flags:    0x%016lx\n", fi->tx_attr->op_flags);
+					VERBOSE_LOG("  tx_attr->inject_size: %zu\n", fi->tx_attr->inject_size);
+					VERBOSE_LOG("  tx_attr->size:        %zu\n", fi->tx_attr->size);
+					VERBOSE_LOG("  tx_attr->iov_limit:   %zu\n", fi->tx_attr->iov_limit);
+			}
+	
+			if (fi->rx_attr) {
+					VERBOSE_LOG("Receive Attributes (rx_attr):\n");
+					VERBOSE_LOG("  rx_attr->op_flags:    0x%016lx\n", fi->rx_attr->op_flags);
+					VERBOSE_LOG("  rx_attr->size:        %zu\n", fi->rx_attr->size);
+					VERBOSE_LOG("  rx_attr->iov_limit:   %zu\n", fi->rx_attr->iov_limit);
+			}
+	}
+
 int ft_getinfo(struct fi_info *hints, struct fi_info **info)
 {
 	char *node, *service;
@@ -1100,6 +1164,9 @@ int ft_getinfo(struct fi_info *hints, struct fi_info **info)
 	}
 
 	hints->domain_attr->threading = opts.threading;
+
+	VERBOSE_LOG("ft_getinfo\n");
+	print_fi_info(hints);
 
 	ret = fi_getinfo(FT_FIVERSION, node, service, flags, hints, info);
 	if (ret) {
@@ -2035,6 +2102,9 @@ static int getaddr(char *node, char *service,
 		}
 		return 0;
 	}
+
+	VERBOSE_LOG("ft_getinfo\n");
+	print_fi_info(hints);
 
 	ret = fi_getinfo(FT_FIVERSION, node, service, flags, hints, &fi);
 	if (ret) {
