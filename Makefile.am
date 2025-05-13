@@ -33,6 +33,9 @@ AM_CFLAGS = -Wall
 AM_CFLAGS += -lpapi
 AM_CFLAGS += -lcycles_count
 
+AM_LDFLAGS += -lpapi
+AM_LDFLAGS += -lcycles_count
+
 if HAVE_LD_VERSION_SCRIPT
     libfabric_version_script = -Wl,--version-script=$(builddir)/libfabric.map
 else !HAVE_LD_VERSION_SCRIPT
