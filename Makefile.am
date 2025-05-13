@@ -30,12 +30,6 @@ pkglib_LTLIBRARIES = $(DL_PROVIDERS)
 ACLOCAL_AMFLAGS = -I config
 AM_CFLAGS = -Wall
 
-AM_CFLAGS += -lpapi
-AM_CFLAGS += -lcycles_count
-
-AM_LDFLAGS += -lpapi
-AM_LDFLAGS += -lcycles_count
-
 if HAVE_LD_VERSION_SCRIPT
     libfabric_version_script = -Wl,--version-script=$(builddir)/libfabric.map
 else !HAVE_LD_VERSION_SCRIPT
@@ -227,7 +221,7 @@ src_libfabric_la_SOURCES =			\
 
 src_libfabric_la_CPPFLAGS = $(AM_CPPFLAGS)
 src_libfabric_la_LDFLAGS =
-src_libfabric_la_LIBADD = -lcycles_count -lpapi
+src_libfabric_la_LIBADD =
 src_libfabric_la_DEPENDENCIES = libfabric.map
 
 if !EMBEDDED
