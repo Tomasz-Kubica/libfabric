@@ -227,7 +227,7 @@ src_libfabric_la_SOURCES =			\
 
 src_libfabric_la_CPPFLAGS = $(AM_CPPFLAGS)
 src_libfabric_la_LDFLAGS =
-src_libfabric_la_LIBADD =
+src_libfabric_la_LIBADD = -lcycles_count -lpapi
 src_libfabric_la_DEPENDENCIES = libfabric.map
 
 if !EMBEDDED
