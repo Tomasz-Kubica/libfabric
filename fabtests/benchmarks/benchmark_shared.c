@@ -171,6 +171,8 @@ void print_benchmark_performance_as_csv(struct timespec *iterations_timestamps,
 /* Pingpong latency test with pre-posted receive buffers. */
 static int pingpong_pre_posted_rx(size_t inject_size)
 {
+	fprintf(stderr, "pingpong_pre_posted_rx\n");
+
 	int ret, i;
 
 	struct timespec iteration_start;
@@ -237,6 +239,8 @@ static int pingpong_pre_posted_rx(size_t inject_size)
 /* Pingpong latency test without pre-posted receive buffers. */
 static int pingpong_no_pre_posted_rx(size_t inject_size)
 {
+	fprintf(stderr, "pingpong_no_pre_posted_rx\n");
+
   struct timespec iteration_start;
 	struct timespec iteration_end;
 
@@ -321,6 +325,8 @@ static int pingpong_no_pre_posted_rx(size_t inject_size)
 
 int pingpong(void)
 {
+	fprintf(stderr, "pingpong\n");
+
   // Alloc memory for roundtrip latency for every iteration (not including warmup interation)
 	// Two timestamps per iteration - start and end
 	iterations_timestamps = malloc(sizeof(struct timespec) * opts.iterations * 2);
@@ -341,7 +347,8 @@ int pingpong(void)
       exit(1);
     }
 
-		papi_initialized = true;
+		fprintf(stderr,
+		       "Using cycles count library for measuring cycles\n");
 	}
 
 	int ret;
@@ -439,6 +446,8 @@ int run_pingpong(void)
 
 int pingpong_rma(enum ft_rma_opcodes rma_op, struct fi_rma_iov *remote)
 {
+	fprintf(stderr, "pingpong_rma\n");
+
   // Alloc memory for roundtrip latency for every iteration (not including warmup interation)
 	// Two timestamps per iteration - start and end
 	iterations_timestamps = malloc(sizeof(struct timespec) * opts.iterations * 2);
@@ -457,7 +466,8 @@ int pingpong_rma(enum ft_rma_opcodes rma_op, struct fi_rma_iov *remote)
       exit(1);
     }
 
-		papi_initialized = true;
+		fprintf(stderr,
+			"Using cycles count library for measuring cycles\n");
 	}
 
 	struct timespec iteration_start;
