@@ -130,6 +130,7 @@ int timeout = -1;
 // For measuring roundtrip latency
 struct timespec start, end;
 struct timespec *iterations_timestamps;
+bool count_receive_cycles;
 
 // For measuring cycles of libfabric calls
 bool papi_initialized = false;
