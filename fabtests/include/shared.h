@@ -277,8 +277,7 @@ extern bool papi_initialized;
 extern int libfabric_calls_event_set;
 extern size_t libfabric_send_calls_counter;
 extern size_t libfabric_receive_calls_counter;
-extern long long *counted_send_cycles;
-extern long long *counted_receive_cycles;
+extern bool count_receive_cycles;
 
 void ft_parseinfo(int op, char *optarg, struct fi_info *hints,
 		  struct ft_opts *opts);

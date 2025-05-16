@@ -13,6 +13,7 @@ AM_CFLAGS += -I$(srcdir)/include/freebsd
 endif
 
 AM_CFLAGS += -lpapi
+AM_CFLAGS += -lcycles_count
 
 bin_PROGRAMS = \
 	functional/fi_av_xfer \

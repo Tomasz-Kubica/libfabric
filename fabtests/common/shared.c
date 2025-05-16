@@ -54,7 +54,7 @@
 #include "shared.h"
 #include "hmem.h"
 
-#include "papi.h"
+#include "cycles_count.h"
 
 
 // Macros for measuring cycles of libfabric calls
@@ -136,8 +136,6 @@ bool papi_initialized = false;
 int libfabric_calls_event_set;
 size_t libfabric_send_calls_counter;
 size_t libfabric_receive_calls_counter;
-long long *counted_send_cycles;
-long long *counted_receive_cycles;
 
 int listen_sock = -1;
 int sock = -1;
@@ -2328,13 +2326,16 @@ bool is_send_call(char *function_name) {
 		while (1) {		\
 			bool is_send;	\
 			if (opts.measure_cycles) { \
-			  is_send = is_send_call(#post_fn);	\
-			  START_CYCLES();					\
-			ret = post_fn(__VA_ARGS__);		\
-			  if (is_send) \
-			  	STOP_CYCLES(libfabric_send_calls_counter, counted_send_cycles);	\
-			  else \
-			  	STOP_CYCLES(libfabric_receive_calls_counter, counted_receive_cycles);	\
+			 is_send = is_send_call(#post_fn);	\
+				if (!is_send) { \
+					cycles_count_lib_set_offset(2); \
+				} \
+			  cycles_count_lib_start(0); \
+			  ret = post_fn(__VA_ARGS__); \
+			  cycles_count_lib_stop(0);	\
+			  if (!is_send) { \
+				  cycles_count_lib_set_offset(2); \
+			  } \
 			} else { \
 			  ret = post_fn(__VA_ARGS__);		 \
 			} \
