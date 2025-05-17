@@ -223,6 +223,7 @@ struct ft_opts {
 	enum fi_threading threading;
 
 	bool measure_cycles;
+	int papi_event_to_count;
 
 	char **argv;
 };

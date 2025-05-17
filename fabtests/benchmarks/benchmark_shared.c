@@ -55,6 +55,16 @@ static int inject_size_set;
  */
 static int offset_rma_start = 0;
 
+int arg_to_papi_event(char *arg)
+{
+	if (strcmp(arg, "cycles") == 0) {
+		return PAPI_TOT_CYC;
+	} else if (strcmp(arg, "instructions") == 0) {
+		return PAPI_TOT_INS;
+	}
+	return -1;
+}
+
 void ft_parse_benchmark_opts(int op, char *optarg)
 {
 	switch (op) {
@@ -77,6 +87,12 @@ void ft_parse_benchmark_opts(int op, char *optarg)
 		break;
 	case 'g':
 		opts.measure_cycles = true;
+		opts.papi_event_to_count = arg_to_papi_event(optarg);
+		if (opts.papi_event_to_count == -1) {
+			fprintf(stderr, "Invalid PAPI event: %s\n", optarg);
+			fprintf(stderr, "Valid events are: cycles, instructions\n");
+			exit(1);
+		}
 		break;
 	default:
 		break;
@@ -340,7 +356,7 @@ int pingpong(void)
 		struct cycles_count_lib_init_args args = {0};
     args.iterations_no = opts.iterations;
     args.counters_no = 4;
-    args.papi_event = PAPI_TOT_CYC;
+    args.papi_event = opts.papi_event_to_count;
     if (cycles_count_lib_init(&args) != 0) {
       fprintf(stderr,
               "Failed to initialize cycles count library\n");

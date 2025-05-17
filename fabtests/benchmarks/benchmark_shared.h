@@ -40,7 +40,7 @@ extern "C" {
 
 #include <rdma/fi_rma.h>
 
-#define BENCHMARK_OPTS "grvkj:W:"
+#define BENCHMARK_OPTS "g:rvkj:W:"
 #define FT_BENCHMARK_MAX_MSG_SIZE (test_size[TEST_CNT - 1].size)
 
 void ft_parse_benchmark_opts(int op, char *optarg);
