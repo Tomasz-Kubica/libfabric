@@ -2335,7 +2335,7 @@ bool is_send_call(char *function_name) {
 			  ret = post_fn(__VA_ARGS__); \
 			  cycles_count_lib_stop(0);	\
 			  if (!is_send) { \
-				  cycles_count_lib_set_offset(2); \
+				  cycles_count_lib_set_offset(0); \
 			  } \
 			} else { \
 			  ret = post_fn(__VA_ARGS__);		 \
