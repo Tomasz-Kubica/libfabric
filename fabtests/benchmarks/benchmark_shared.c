@@ -475,7 +475,7 @@ int pingpong_rma(enum ft_rma_opcodes rma_op, struct fi_rma_iov *remote)
 		struct cycles_count_lib_init_args args = {0};
     args.iterations_no = opts.iterations;
     args.counters_no = 4;
-    args.papi_event = PAPI_TOT_CYC;
+    args.papi_event = opts.papi_event_to_count;
     if (cycles_count_lib_init(&args) != 0) {
       fprintf(stderr,
               "Failed to initialize cycles count library\n");

@@ -2299,24 +2299,9 @@ bool is_send_call(char *function_name) {
 	if (strcmp(function_name, "fi_recv") == 0 ||
 			strcmp(function_name, "fi_trecv") == 0)
 				{
-		return true;
+		return false;
 	}
-	return false;
-	
-	// if (strcmp(function_name, "fi_tsend") == 0 ||
-	//     strcmp(function_name, "fi_tsenddata") == 0 ||
-	//     strcmp(function_name, "fi_send") == 0 ||
-	//     strcmp(function_name, "fi_senddata") == 0 ||
-	//     strcmp(function_name, "fi_write") == 0 ||
-	//     strcmp(function_name, "fi_writedata") == 0 ||
-	//     strcmp(function_name, "fi_inject_write") == 0 ||
-	//     strcmp(function_name, "fi_inject_writedata") == 0 ||
-	//     strcmp(function_name, "fi_tinjectdata") == 0 ||
-	// 		strcmp(function_name, "fi_inject") == 0)
-	// 			{
-	// 	return true;
-	// }
-	// return false;
+	return true;
 }
 
 #define FT_POST(post_fn, progress_fn, cq, seq, cq_cntr, op_str, ...)		\
