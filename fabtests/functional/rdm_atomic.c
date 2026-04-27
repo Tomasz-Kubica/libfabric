@@ -226,28 +226,43 @@ static int fill_data(enum ft_atomic_opcodes opcode)
 
 static void report_perf(void)
 {
-	int len;
+	uint64_t start_ns, end_ns;
+	int i, len;
 
-	len = snprintf((test_name), sizeof(test_name), "%s_",
-		       fi_tostr(&(datatype), FI_TYPE_ATOMIC_TYPE));
-	snprintf((test_name) + len, sizeof(test_name) - len, "%s_lat",
-		 fi_tostr(&op_type, FI_TYPE_ATOMIC_OP));
+	if (opts.dst_addr && iterations_timestamps) {
+		printf("#, usec\n");
+		for (i = 0; i < opts.iterations; i++) {
+			start_ns = (uint64_t)iterations_timestamps[i * 2].tv_sec * 1000000000ULL +
+				   iterations_timestamps[i * 2].tv_nsec;
+			end_ns = (uint64_t)iterations_timestamps[i * 2 + 1].tv_sec * 1000000000ULL +
+				 iterations_timestamps[i * 2 + 1].tv_nsec;
+			printf("%d, %.2f\n", i, (end_ns - start_ns) / 1000.0);
+		}
+	} else {
+		len = snprintf((test_name), sizeof(test_name), "%s_",
+			       fi_tostr(&(datatype), FI_TYPE_ATOMIC_TYPE));
+		snprintf((test_name) + len, sizeof(test_name) - len, "%s_lat",
+			 fi_tostr(&op_type, FI_TYPE_ATOMIC_OP));
 
-	if (opts.machr)
-		show_perf_mr(opts.transfer_size, opts.iterations, &start, &end, 1, opts.argc,
-			opts.argv);
-	else
-		show_perf(test_name, opts.transfer_size, opts.iterations, &start, &end, 1);
+		if (opts.machr)
+			show_perf_mr(opts.transfer_size, opts.iterations, &start, &end, 1, opts.argc,
+				opts.argv);
+		else
+			show_perf(test_name, opts.transfer_size, opts.iterations, &start, &end, 1);
+	}
 }
 
 static int handle_atomic_base_op(void)
 {
 	int ret = FI_SUCCESS, i;
 	size_t count = 0;
+	struct timespec iteration_start, iteration_end;
 
 	ret = check_base_atomic_op(ep, op_type, datatype, &count);
 	if (ret)
 		return ret;
+
+	iterations_timestamps = malloc(sizeof(struct timespec) * opts.iterations * 2);
 
 	opts.transfer_size = datatype_to_size(datatype);
 	ft_start();
@@ -258,7 +273,13 @@ static int handle_atomic_base_op(void)
 				return ret;
 		}
 
+		clock_gettime(CLOCK_MONOTONIC, &iteration_start);
 		ret = execute_base_atomic_op();
+		clock_gettime(CLOCK_MONOTONIC, &iteration_end);
+
+		iterations_timestamps[i * 2] = iteration_start;
+		iterations_timestamps[i * 2 + 1] = iteration_end;
+
 		if (ret)
 			break;
 
@@ -280,10 +301,13 @@ static int handle_atomic_fetch_op(void)
 {
 	int ret = FI_SUCCESS, i;
 	size_t count = 0;
+	struct timespec iteration_start, iteration_end;
 
 	ret = check_fetch_atomic_op(ep, op_type, datatype, &count);
 	if (ret)
 		return ret;
+
+	iterations_timestamps = malloc(sizeof(struct timespec) * opts.iterations * 2);
 
 	opts.transfer_size = datatype_to_size(datatype);
 	ft_start();
@@ -294,7 +318,13 @@ static int handle_atomic_fetch_op(void)
 				return ret;
 		}
 
+		clock_gettime(CLOCK_MONOTONIC, &iteration_start);
 		ret = execute_fetch_atomic_op();
+		clock_gettime(CLOCK_MONOTONIC, &iteration_end);
+
+		iterations_timestamps[i * 2] = iteration_start;
+		iterations_timestamps[i * 2 + 1] = iteration_end;
+
 		if (ret)
 			break;
 
@@ -316,10 +346,13 @@ static int handle_atomic_compare_op(void)
 {
 	int ret = FI_SUCCESS, i;
 	size_t count = 0;
+	struct timespec iteration_start, iteration_end;
 
 	ret = check_compare_atomic_op(ep, op_type, datatype, &count);
 	if (ret)
 		return ret;
+
+	iterations_timestamps = malloc(sizeof(struct timespec) * opts.iterations * 2);
 
 	opts.transfer_size = datatype_to_size(datatype);
 	ft_start();
@@ -330,7 +363,13 @@ static int handle_atomic_compare_op(void)
 				return ret;
 		}
 
+		clock_gettime(CLOCK_MONOTONIC, &iteration_start);
 		ret = execute_compare_atomic_op();
+		clock_gettime(CLOCK_MONOTONIC, &iteration_end);
+
+		iterations_timestamps[i * 2] = iteration_start;
+		iterations_timestamps[i * 2 + 1] = iteration_end;
+
 		if (ret)
 			break;
 
